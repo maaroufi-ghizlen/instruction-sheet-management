@@ -1,0 +1,16 @@
+// services/auth-service/test/jest-e2e.json
+
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "setupFilesAfterEnv": ["<rootDir>/test/setup-e2e.ts"],
+  "moduleNameMapping": {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^@shared/(.*)$": "<rootDir>/../../shared/$1"
+  }
+}
