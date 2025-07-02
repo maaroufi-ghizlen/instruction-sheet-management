@@ -2,6 +2,42 @@
 
 import { UserRole, SheetStatus, ValidationStage, WorkflowStatus, AuditAction } from '../enums/enums';
 
+
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  departmentId: string;
+  isActive: boolean;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  description?: string;
+  managerId: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Sheet {
+  id: string;
+  title: string;
+  description?: string;
+  reference: string;
+  status: SheetStatus;
+  uploadedBy: string;
+  departmentId: string;
+  filePath: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 export interface BaseEntity {
   _id?: string;
   createdAt?: Date;

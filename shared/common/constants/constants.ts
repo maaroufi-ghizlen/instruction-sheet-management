@@ -1,4 +1,24 @@
 // shared/common/constants.ts
+export const API_VERSIONS = {
+  V1: 'v1',
+} as const;
+
+export const DEFAULT_PAGINATION = {
+  PAGE: 1,
+  LIMIT: 10,
+  MAX_LIMIT: 100,
+} as const;
+
+export const JWT_CONSTANTS = {
+  ACCESS_TOKEN_EXPIRES_IN: '15m',
+  REFRESH_TOKEN_EXPIRES_IN: '7d',
+} as const;
+
+export const VALIDATION_RULES = {
+  PASSWORD_MIN_LENGTH: 8,
+  NAME_MIN_LENGTH: 2,
+  DESCRIPTION_MAX_LENGTH: 500,
+} as const;
 
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_SIZE = 100;

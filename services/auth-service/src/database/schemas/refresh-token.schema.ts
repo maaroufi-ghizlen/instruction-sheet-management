@@ -4,8 +4,9 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
 export interface RefreshTokenDocument extends RefreshToken, Document {
-  readonly isExpired: boolean;
+  _id: Types.ObjectId;
   readonly isValid: boolean;
+  toJSON(): Record<string, unknown>;
 }
 
 @Schema({
@@ -21,7 +22,7 @@ export interface RefreshTokenDocument extends RefreshToken, Document {
   },
 })
 export class RefreshToken {
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true, unique: true })
   token: string;
 
   @Prop({
@@ -32,29 +33,35 @@ export class RefreshToken {
   })
   userId: Types.ObjectId;
 
-  @Prop({ required: true })
+  @Prop({ required: true, index: true })
   expiresAt: Date;
 
-  @Prop({ default: false })
+  @Prop({ default: false, index: true })
   isRevoked: boolean;
 
-  @Prop({ trim: true })
-  userAgent: string;
-
-  @Prop({ trim: true })
+  @Prop()
   ipAddress: string;
 
+  @Prop()
+  userAgent: string;
+
   @Prop({ type: Date })
-  lastUsedAt: Date;
+  revokedAt: Date;
+
+  @Prop()
+  revokedByIp: string;
+
+  @Prop()
+  replacedByToken: string;
 
   // Virtual for checking if token is expired
   get isExpired(): boolean {
-    return this.expiresAt < new Date();
+    return Date.now() >= this.expiresAt.getTime();
   }
 
-  // Virtual for checking if token is valid
+  // Virtual for checking if token is active (not expired and not revoked)
   get isValid(): boolean {
-    return !this.isRevoked && !this.isExpired;
+    return !this.isExpired && !this.isRevoked;
   }
 }
 
@@ -67,18 +74,15 @@ RefreshTokenSchema.index({ expiresAt: 1 });
 RefreshTokenSchema.index({ isRevoked: 1 });
 RefreshTokenSchema.index({ createdAt: -1 });
 
-// Add compound indexes
-RefreshTokenSchema.index({ userId: 1, isRevoked: 1 });
-RefreshTokenSchema.index({ token: 1, isRevoked: 1 });
-
-// Add TTL index for automatic cleanup
-RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-// Add virtuals
+// Add virtual for isExpired
 RefreshTokenSchema.virtual('isExpired').get(function() {
-  return this.expiresAt < new Date();
+  return Date.now() >= this.expiresAt.getTime();
 });
 
+// Add virtual for isValid
 RefreshTokenSchema.virtual('isValid').get(function() {
-  return !this.isRevoked && !this.isExpired;
+  return !this.isExpired && !this.isRevoked;
 });
+
+// Create TTL index for automatic cleanup of expired tokens
+RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
