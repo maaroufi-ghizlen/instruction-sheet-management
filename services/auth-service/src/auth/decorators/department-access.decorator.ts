@@ -2,5 +2,5 @@
 
 import { SetMetadata } from '@nestjs/common';
 
-export const DEPARTMENT_ACCESS_KEY = 'departmentAccess';
-export const DepartmentAccess = () => SetMetadata(DEPARTMENT_ACCESS_KEY, true);
+export const DEPARTMENT_ACCESS_KEY = 'requiresDepartmentAccess';
+export const RequireDepartmentAccess = () => SetMetadata(DEPARTMENT_ACCESS_KEY, true);

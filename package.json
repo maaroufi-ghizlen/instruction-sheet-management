@@ -1,88 +1,37 @@
 {
-  "name": "instruction-sheet-management",
+  "name": "@instruction-sheet/shared",
   "version": "1.0.0",
-  "description": "Enterprise-grade instruction sheet management system with microservices architecture",
-  "main": "index.js",
-  "workspaces": [
-    "services/*",
-    "gateway",
-    "frontend",
-    "shared"
-  ],
-  "scripts": {
-    "install:all": "npm install && npm run install:services",
-    "install:services": "npm install --workspaces",
-    "build": "npm run build --workspaces",
-    "build:auth": "npm run build --workspace=services/auth-service",
-    "build:user": "npm run build --workspace=services/user-service",
-    "start:auth": "npm run start:dev --workspace=services/auth-service",
-    "start:user": "npm run start:dev --workspace=services/user-service",
-    "start:gateway": "npm run start:dev --workspace=gateway",
-    "start:frontend": "npm run dev --workspace=frontend",
-    "test": "npm run test --workspaces",
-    "test:auth": "npm run test --workspace=services/auth-service",
-    "test:e2e": "npm run test:e2e --workspaces",
-    "lint": "npm run lint --workspaces",
-    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
-    "dev:services": "concurrently \"npm run start:auth\" \"npm run start:user\"",
-    "clean": "rimraf dist node_modules services/*/node_modules services/*/dist",
-    "postinstall": "husky install"
-  },
-  "keywords": [
-    "instruction-sheet",
-    "management",
-    "microservices",
-    "nestjs",
-    "mongodb",
-    "jwt",
-    "enterprise"
-  ],
+  "description": "Shared types, interfaces, and utilities for instruction sheet management system",
   "author": "Development Team",
+  "private": true,
   "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "lint": "eslint \"**/*.ts\" --fix",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\""
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.17.0",
     "@typescript-eslint/parser": "^6.17.0",
-    "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.2",
-    "husky": "^8.0.3",
-    "lint-staged": "^15.2.0",
     "prettier": "^3.1.1",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.3"
   },
-  "dependencies": {
-    "dotenv": "^16.3.1",
-    "tsconfig-paths": "^4.2.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/maaroufi-ghizlen/instruction-sheet-management.git"
-  },
-  "bugs": {
-    "url": "https://github.com/maaroufi-ghizlen/instruction-sheet-management/issues"
-  },
-  "homepage": "https://github.com/maaroufi-ghizlen/instruction-sheet-management#readme",
-  "lint-staged": {
-    "*.{ts,js,json,md}": [
-      "prettier --write",
-      "git add"
-    ],
-    "*.{ts,js}": [
-      "eslint --fix",
-      "git add"
-    ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "pre-push": "npm run test"
-    }
+  "peerDependencies": {
+    "typescript": ">=4.8.0"
   }
 }

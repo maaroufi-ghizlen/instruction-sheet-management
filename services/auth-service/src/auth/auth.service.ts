@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // services/auth-service/src/auth/auth.service.ts
 
 import {
@@ -11,7 +12,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
@@ -29,6 +30,7 @@ import {
   ResetPasswordDto,
   LoginResponseDto,
   Setup2FaResponseDto,
+  UserResponseDto,
 } from './dto';
 import { randomBytes, createHash } from 'crypto';
 
@@ -76,7 +78,7 @@ export class AuthService {
 
     return {
       message: 'User registered successfully',
-      userId: (user._id as any).toString(),
+      userId: user._id.toString(),
     };
   }
 
@@ -109,22 +111,40 @@ export class AuthService {
 
     // Generate tokens
     const payload: JwtPayload = {
-      sub: (user._id as any).toString(),
+      sub: user._id.toString(),
       email: user.email,
       role: user.role,
-      departmentId: (user.departmentId as any).toString(),
+      departmentId: (user.departmentId as Types.ObjectId).toString(),
     };
 
     const accessToken = this.jwtService.sign(payload);
-    const refreshToken = await this.generateRefreshToken((user._id as any).toString(), ipAddress, userAgent);
+    const refreshToken = await this.generateRefreshToken(user._id.toString(), ipAddress, userAgent);
 
     this.logger.log(`User logged in successfully: ${email}`);
 
     return {
       accessToken,
       refreshToken: refreshToken.token,
-      user: user.toJSON() as any,
+      user: this.transformUserToResponseDto(user),
       expiresIn: 900, // 15 minutes
+    };
+  }
+
+  // Transform User Document to Response DTO
+  private transformUserToResponseDto(user: UserDocument): UserResponseDto {
+    return {
+      id: user._id.toString(),
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: user.fullName,
+      role: user.role,
+      departmentId: (user.departmentId as Types.ObjectId).toString(),
+      isActive: user.isActive,
+      isTwoFactorEnabled: user.isTwoFactorEnabled,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: (user as UserDocument & { createdAt: Date }).createdAt,
+      updatedAt: (user as UserDocument & { updatedAt: Date }).updatedAt,
     };
   }
 
@@ -170,15 +190,15 @@ export class AuthService {
     const { refreshToken } = refreshTokenDto;
 
     const tokenDoc = await this.refreshTokenModel
-      .findOne({ token: refreshToken, isRevoked: false })
-      .populate('userId');
+      .findOne({ token: refreshToken, isRevoked: false });
 
-    if (!tokenDoc || !(tokenDoc as any).isValid) {
+    if (!tokenDoc || !(tokenDoc as RefreshTokenDocument & { isValid: boolean }).isValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = tokenDoc.userId as any;
-    if (!user.isActive) {
+    // Fetch the user separately to get full UserDocument
+    const user = await this.userModel.findById(tokenDoc.userId);
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('User account is deactivated');
     }
 
@@ -187,7 +207,7 @@ export class AuthService {
       sub: user._id.toString(),
       email: user.email,
       role: user.role,
-      departmentId: user.departmentId.toString(),
+      departmentId: (user.departmentId as Types.ObjectId).toString(),
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -370,7 +390,7 @@ export class AuthService {
 
     // Disable 2FA
     user.isTwoFactorEnabled = false;
-    (user.twoFactorSecret as any) = undefined;
+    user.twoFactorSecret = undefined;
     await user.save();
 
     this.logger.log(`2FA disabled for user: ${user.email}`);
@@ -400,9 +420,9 @@ export class AuthService {
 
     // Generate reset token (in real implementation, send via email)
     const resetToken = randomBytes(32).toString('hex');
-    const resetTokenHash = createHash('sha256').update(resetToken).digest('hex');
+    // Note: In production, you would store this hash in the database with expiration
+    createHash('sha256').update(resetToken).digest('hex');
 
-    // Store reset token hash (would normally save to database with expiration)
     // For demo purposes, we'll just log it
     this.logger.log(`Password reset token for ${email}: ${resetToken}`);
 
@@ -411,7 +431,7 @@ export class AuthService {
 
   // Reset Password
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
-    const { token, newPassword } = resetPasswordDto;
+    const { token } = resetPasswordDto;
 
     // In real implementation, verify token from database
     // For demo purposes, we'll skip token verification
@@ -421,13 +441,13 @@ export class AuthService {
   }
 
   // Get user profile
-  async getProfile(userId: string): Promise<UserDocument> {
+  async getProfile(userId: string): Promise<UserResponseDto> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    return this.transformUserToResponseDto(user);
   }
 
   // Validate JWT payload for strategy

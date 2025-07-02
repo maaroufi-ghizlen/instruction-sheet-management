@@ -1,31 +1,14 @@
 // services/auth-service/src/config/configuration.ts
 
-import { registerAs } from '@nestjs/config';
-
-export default registerAs('config', () => ({
-  // Environment
-  nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.AUTH_SERVICE_PORT || '3001', 10),
-  
-  // Database
+export default () => ({
+  // Database Configuration
   database: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/instruction_sheet_auth',
-    options: {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-    },
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/instruction_sheet_db',
   },
 
-  // Redis
+  // Redis Configuration
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
-    options: {
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-    },
   },
 
   // JWT Configuration
@@ -36,38 +19,59 @@ export default registerAs('config', () => ({
     refreshTokenExpirationTime: process.env.JWT_REFRESH_TOKEN_EXPIRATION_TIME || '7d',
   },
 
-  // Security
+  // Bcrypt Configuration
   bcrypt: {
-    saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10),
+    saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 12,
   },
 
-  // Rate Limiting
+  // Service Ports
+  ports: {
+    auth: parseInt(process.env.AUTH_SERVICE_PORT, 10) || 3001,
+    user: parseInt(process.env.USER_SERVICE_PORT, 10) || 3002,
+    gateway: parseInt(process.env.GATEWAY_PORT, 10) || 3000,
+  },
+
+  // Environment Configuration
+  nodeEnv: process.env.NODE_ENV || 'development',
+  logLevel: process.env.LOG_LEVEL || 'debug',
+
+  // Rate Limiting Configuration
   rateLimit: {
-    ttl: parseInt(process.env.RATE_LIMIT_TTL || '60', 10),
-    max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+    ttl: parseInt(process.env.RATE_LIMIT_TTL, 10) || 60,
+    max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
   },
 
-  // CORS
+  // CORS Configuration
   cors: {
-    origins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origins: process.env.CORS_ORIGINS || 'http://localhost:3000',
     credentials: process.env.CORS_CREDENTIALS === 'true',
   },
 
-  // Two-Factor Authentication
-  twoFactor: {
-    serviceName: 'Instruction Sheet Management',
-    issuer: 'InstructionSheet',
-    window: 2, // Allow 2 windows (±1 for time drift)
+  // Email Configuration
+  email: {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT, 10) || 587,
+    user: process.env.SMTP_USER,
+    password: process.env.SMTP_PASS,
+    from: process.env.EMAIL_FROM || 'noreply@yourcompany.com',
   },
 
-  // Logging
-  logging: {
-    level: process.env.LOG_LEVEL || 'debug',
+  // Security Configuration
+  security: {
+    encryptionKey: process.env.ENCRYPTION_KEY || 'your-32-character-encryption-key-here',
+    apiKeyHeader: process.env.API_KEY_HEADER || 'x-api-key',
   },
 
-  // API
-  api: {
-    prefix: 'api/v1',
-    version: '1.0.0',
+  // File Upload Configuration
+  upload: {
+    path: process.env.UPLOAD_PATH || './uploads',
+    maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 10485760, // 10MB
+    allowedTypes: process.env.ALLOWED_FILE_TYPES?.split(',') || ['pdf', 'doc', 'docx', 'txt'],
   },
-}));
+
+  // Monitoring Configuration
+  monitoring: {
+    healthCheckTimeout: parseInt(process.env.HEALTH_CHECK_TIMEOUT, 10) || 5000,
+    metricsPort: parseInt(process.env.METRICS_PORT, 10) || 9090,
+  },
+});

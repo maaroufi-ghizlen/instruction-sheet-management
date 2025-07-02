@@ -1,41 +1,23 @@
-
 // services/auth-service/src/auth/decorators/api-auth.decorator.ts
 
 import { applyDecorators, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiUnauthorizedResponse, ApiForbiddenResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { RolesGuard } from '../guards/roles.guard';
-import { TwoFactorGuard } from '../guards/two-factor.guard';
-import { UserRole } from '../../../../../shared/common/enums/enums';
-import { Roles } from './roles.decorator';
 
-interface ApiAuthOptions {
-  roles?: UserRole[];
-  requireTwoFactor?: boolean;
-}
-
-export function ApiAuth(options: ApiAuthOptions = {}) {
-  const decorators = [
+export function ApiAuth() {
+  return applyDecorators(
     UseGuards(JwtAuthGuard),
     ApiBearerAuth('JWT-auth'),
-    ApiUnauthorizedResponse({
-      description: 'Unauthorized - Invalid or missing authentication token',
+    ApiUnauthorizedResponse({ 
+      description: 'Unauthorized - Invalid or missing JWT token',
+      schema: {
+        type: 'object',
+        properties: {
+          statusCode: { type: 'number', example: 401 },
+          message: { type: 'string', example: 'Unauthorized' },
+          error: { type: 'string', example: 'Unauthorized' },
+        },
+      },
     }),
-  ];
-
-  if (options.roles && options.roles.length > 0) {
-    decorators.push(
-      UseGuards(RolesGuard),
-      Roles(...options.roles),
-      ApiForbiddenResponse({
-        description: `Forbidden - Required roles: ${options.roles.join(', ')}`,
-      }),
-    );
-  }
-
-  if (options.requireTwoFactor) {
-    decorators.push(UseGuards(TwoFactorGuard));
-  }
-
-  return applyDecorators(...decorators);
+  );
 }
