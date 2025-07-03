@@ -35,19 +35,18 @@ import configuration from './config/configuration';
       ],
     }),
 
-    // Database
+    // Database - FIXED MongoDB options
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI'),
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/instruction_sheet_db',
+        // FIXED: Removed unsupported options
+        retryWrites: true,
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
-        bufferMaxEntries: 0,
-        bufferCommands: false,
+        // Removed: bufferMaxEntries, bufferCommands (not supported in newer versions)
       }),
     }),
 

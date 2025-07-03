@@ -2,7 +2,7 @@
 
 import { IsEmail, IsString, MinLength, IsEnum, IsMongoId, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { UserRole } from '../../../../../shared/common/enums/enums';
+import { UserRole } from '@shared/enums/enums';
 
 export class RegisterDto {
   @ApiProperty({

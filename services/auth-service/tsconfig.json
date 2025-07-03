@@ -9,8 +9,7 @@
     "target": "ES2020",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./src",
-    "rootDir": "./src",
+    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strict": false,
@@ -22,8 +21,8 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "paths": {
-      "@shared/*": ["../../../shared/common/*"],
-      "@/*": ["./*"]
+      "@shared/*": ["../../shared/dist/common/*"],
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],

@@ -2,7 +2,7 @@
 
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from '../../../../../shared/common/enums/enums';
+import { UserRole } from '@shared/enums/enums';
 import { DEPARTMENT_ACCESS_KEY } from '../decorators/department-access.decorator';
 
 @Injectable()
