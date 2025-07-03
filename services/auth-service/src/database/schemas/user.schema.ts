@@ -7,18 +7,18 @@ import { UserRole } from '@shared/enums/enums';
 // Define UserDocument interface with proper method signatures
 export interface UserDocument extends User, Document {
   _id: Types.ObjectId;
-  incLoginAttempts(): Promise<any>;
-  resetLoginAttempts(): Promise<any>;
+  incLoginAttempts(): Promise<void>;
+  resetLoginAttempts(): Promise<void>;
   readonly isLocked: boolean;
   readonly fullName: string;
-  toJSON(): any;
+  toJSON(): Record<string, unknown>;
 }
 
 @Schema({
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: function(doc, ret) {
+    transform: function(doc: Document, ret: Record<string, unknown>) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -35,7 +35,7 @@ export class User {
     unique: true,
     lowercase: true,
     trim: true,
-    index: true,
+    // REMOVED: index: true (to avoid duplicate with unique)
   })
   email: string;
 
@@ -59,7 +59,7 @@ export class User {
   @Prop({
     type: Types.ObjectId,
     required: true,
-    index: true,
+    // REMOVED: index: true (will be added via schema.index() only)
   })
   departmentId: Types.ObjectId;
 
@@ -100,8 +100,8 @@ export class User {
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
-// Add indexes
-UserSchema.index({ email: 1 });
+// Add indexes ONLY via schema.index() to avoid duplicates
+UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ departmentId: 1 });
 UserSchema.index({ isActive: 1 });
@@ -131,7 +131,9 @@ UserSchema.methods.incLoginAttempts = function() {
     });
   }
   
-  const updates: any = { $inc: { loginAttempts: 1 } };
+  const updates: { $inc: { loginAttempts: number }; $set?: { lockedUntil: number } } = { 
+    $inc: { loginAttempts: 1 } 
+  };
   
   // If we're locking the account after 5 attempts, set lockUntil to 2 hours from now
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
