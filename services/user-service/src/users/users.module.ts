@@ -9,7 +9,7 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User, UserSchema } from '../database/schemas/user.schema';
 import { JwtStrategy } from '../auth/strategies/jwt.strategy';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { RolesGuard } from '@shared/guards/roles.guard';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UserOwnershipGuard } from './guards/user-ownership.guard';
 

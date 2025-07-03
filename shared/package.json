@@ -1,14 +1,39 @@
+
 {
   "name": "@instruction-sheet/shared",
   "version": "1.0.0",
-  "description": "Shared types and utilities",
+  "description": "Shared types, utilities, guards, and decorators for instruction sheet management system",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "clean": "rimraf dist",
+    "prepublish": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.3.0",
+    "@nestjs/passport": "^10.0.3",
+    "@nestjs/swagger": "^7.1.16",
+    "passport-jwt": "^4.0.1",
+    "bcrypt": "^5.1.1",
+    "class-validator": "^0.14.0",
+    "class-transformer": "^0.5.1"
   },
   "devDependencies": {
-    "typescript": "^5.3.3"
-  }
+    "typescript": "^5.3.3",
+    "rimraf": "^5.0.5",
+    "@types/bcrypt": "^5.0.2",
+    "@types/passport-jwt": "^3.0.13"
+  },
+  "keywords": [
+    "nestjs",
+    "shared",
+    "types",
+    "guards",
+    "decorators",
+    "utilities"
+  ],
+  "author": "Your Company",
+  "license": "MIT"
 }
