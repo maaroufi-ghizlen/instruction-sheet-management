@@ -6,9 +6,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './users/users.module';
 import { DatabaseModule } from './database/database.module';
-import { AuditModule } from './audit/audit.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import configuration from './config/configuration';
 
 @Module({
@@ -53,6 +54,7 @@ import configuration from './config/configuration';
 
     // JWT (for token validation)
     JwtModule.registerAsync({
+      global: true,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
@@ -68,10 +70,15 @@ import configuration from './config/configuration';
 
     // Custom modules
     DatabaseModule,
-    AuditModule,
     UsersModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    // Global JWT Guard
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}
