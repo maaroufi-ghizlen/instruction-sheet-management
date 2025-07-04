@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // services/auth-service/src/auth/auth.service.ts
 
 import {
@@ -16,10 +15,11 @@ import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
+import { randomBytes, createHash } from 'crypto';
 import { User, UserDocument } from '../database/schemas/user.schema';
 import { RefreshToken, RefreshTokenDocument } from '../database/schemas/refresh-token.schema';
-import { UserRole } from '@shared/enums/enums';
-import { JwtPayload } from '@shared/types';
+import { UserRole } from '@instruction-sheet/shared';
+import { JwtPayload } from '@instruction-sheet/shared';
 import {
   LoginDto,
   RegisterDto,
@@ -32,7 +32,6 @@ import {
   Setup2FaResponseDto,
   UserResponseDto,
 } from './dto';
-import { randomBytes, createHash } from 'crypto';
 
 @Injectable()
 export class AuthService {

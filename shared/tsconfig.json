@@ -20,7 +20,10 @@
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "paths": {
+      "@shared/*": ["./common/*"]
+    }
   },
   "include": ["common/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"]

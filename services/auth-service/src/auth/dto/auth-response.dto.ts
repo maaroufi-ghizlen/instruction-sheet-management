@@ -2,7 +2,7 @@
 // services/auth-service/src/auth/dto/auth-response.dto.ts
 
 import { ApiProperty } from '@nestjs/swagger';
-import { UserRole } from '@shared/enums/enums';
+import { UserRole } from '@instruction-sheet/shared';
 
 export class UserResponseDto {
   @ApiProperty({ example: '507f1f77bcf86cd799439011' })

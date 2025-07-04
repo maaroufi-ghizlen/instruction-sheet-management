@@ -1,4 +1,6 @@
+
 // services/user-service/src/app.module.ts
+// 🔄 CHANGES: Updated to use shared guards globally and removed local ones
 
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -6,10 +8,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { APP_GUARD } from '@nestjs/core';
+
 import { UsersModule } from './users/users.module';
 import { DatabaseModule } from './database/database.module';
-import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import configuration from './config/configuration';
 
 @Module({
@@ -73,12 +74,6 @@ import configuration from './config/configuration';
     UsersModule,
   ],
   controllers: [],
-  providers: [
-    // Global JWT Guard
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-  ],
+  providers: [],
 })
 export class AppModule {}

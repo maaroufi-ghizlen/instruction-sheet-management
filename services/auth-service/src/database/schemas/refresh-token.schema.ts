@@ -29,14 +29,13 @@ export class RefreshToken {
     type: Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true,
   })
   userId: Types.ObjectId;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   expiresAt: Date;
 
-  @Prop({ default: false, index: true })
+  @Prop({ default: false })
   isRevoked: boolean;
 
   @Prop()
@@ -68,9 +67,8 @@ export class RefreshToken {
 export const RefreshTokenSchema = SchemaFactory.createForClass(RefreshToken);
 
 // Add indexes
-RefreshTokenSchema.index({ token: 1 });
+// Note: token index is automatic due to unique: true in @Prop
 RefreshTokenSchema.index({ userId: 1 });
-RefreshTokenSchema.index({ expiresAt: 1 });
 RefreshTokenSchema.index({ isRevoked: 1 });
 RefreshTokenSchema.index({ createdAt: -1 });
 

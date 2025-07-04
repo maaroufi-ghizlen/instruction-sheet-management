@@ -131,3 +131,13 @@ export interface ValidationError {
   message: string;
   value?: any;
 }
+
+// JWT Payload interface
+export interface JwtPayload {
+  sub: string; // User ID
+  email: string;
+  role: UserRole;
+  departmentId: string;
+  iat?: number;
+  exp?: number;
+}

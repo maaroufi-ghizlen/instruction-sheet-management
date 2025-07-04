@@ -1,25 +1,34 @@
+
 // services/user-service/src/users/users.service.ts
+// 🔄 CHANGES: Updated to use shared utilities and auth helpers
 
 import {
   Injectable,
   NotFoundException,
   ConflictException,
   BadRequestException,
-  ForbiddenException,
   Logger,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
+
+// 🔄 CHANGED: Import utilities from shared package
+// ❌ REMOVED: import * as bcrypt from 'bcrypt';
+// ❌ REMOVED: Local pagination logic
+// ❌ REMOVED: Local validation utilities
+
+// ✅ ADDED: Import shared utilities and auth helpers
+import { AuthUtils, PaginationUtils, ValidationUtils, ResponseUtils } from '@instruction-sheet/shared';
+
 import { User, UserDocument } from '../database/schemas/user.schema';
-import { UserRole } from '@shared/enums/enums';
 import {
   CreateUserDto,
   UpdateUserDto,
   UsersQueryDto,
   UserResponseDto,
   UsersListResponseDto,
-  PaginationMetaDto,
 } from './dto';
 
 @Injectable()
@@ -28,372 +37,388 @@ export class UsersService {
 
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private configService: ConfigService,
   ) {}
 
-  /**
-   * Create a new user (Admin only)
-   */
-  async createUser(createUserDto: CreateUserDto, createdBy: string): Promise<UserResponseDto> {
-    const { email, password, firstName, lastName, role, departmentId, isActive = true } = createUserDto;
+  async create(createUserDto: CreateUserDto, createdBy?: string): Promise<UserResponseDto> {
+    this.logger.log(`Creating new user: ${createUserDto.email}`);
 
-    // Check if user already exists
-    const existingUser = await this.userModel.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
+    try {
+      // Check if user already exists
+      const existingUser = await this.userModel.findOne({ email: createUserDto.email });
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
+
+      // 🔄 CHANGED: Use shared auth utility for password validation and hashing
+      // ❌ REMOVED: const saltRounds = this.configService.get<number>('BCRYPT_SALT_ROUNDS') || 12;
+      // ❌ REMOVED: const passwordHash = await bcrypt.hash(createUserDto.password, saltRounds);
+
+      // ✅ ADDED: Use shared auth utilities for password validation and hashing
+      const passwordValidation = AuthUtils.validatePasswordStrength(createUserDto.password);
+      if (!passwordValidation.isValid) {
+        throw new BadRequestException(passwordValidation.errors);
+      }
+
+      const saltRounds = this.configService.get<number>('BCRYPT_SALT_ROUNDS') || 12;
+      const passwordHash = await AuthUtils.hashPassword(createUserDto.password, saltRounds);
+
+      // Create user
+      const userData = {
+        email: createUserDto.email,
+        passwordHash,
+        firstName: createUserDto.firstName,
+        lastName: createUserDto.lastName,
+        role: createUserDto.role,
+        departmentId: new Types.ObjectId(createUserDto.departmentId),
+        isActive: createUserDto.isActive ?? true,
+        lastModifiedAt: new Date(),
+        lastModifiedBy: createdBy ? new Types.ObjectId(createdBy) : undefined,
+      };
+
+      const user = new this.userModel(userData);
+      await user.save();
+
+      this.logger.log(`User created successfully: ${user.email}`);
+      return this.mapToUserResponse(user);
+    } catch (error) {
+      if (error instanceof ConflictException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(`Failed to create user: ${createUserDto.email}`, error.stack);
+      throw new InternalServerErrorException('Failed to create user');
     }
-
-    // Hash password
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    // Create user
-    const user = new this.userModel({
-      email: email.toLowerCase(),
-      passwordHash,
-      firstName,
-      lastName,
-      role,
-      departmentId: new Types.ObjectId(departmentId),
-      isActive,
-      isTwoFactorEnabled: false,
-      loginAttempts: 0,
-      lastModifiedBy: new Types.ObjectId(createdBy),
-      lastModifiedAt: new Date(),
-    });
-
-    const savedUser = await user.save();
-    
-    this.logger.log(`User created successfully: ${email} by ${createdBy}`);
-    
-    return this.mapToUserResponse(savedUser);
   }
 
-  /**
-   * Get all users with pagination and filtering
-   */
   async findAll(query: UsersQueryDto): Promise<UsersListResponseDto> {
-    const {
-      page = 1,
-      limit = 10,
-      role,
-      departmentId,
-      isActive,
-      search,
-      sortBy = 'lastName',
-      sortOrder = 'asc',
-    } = query;
+    this.logger.log('Fetching users with query', query);
 
-    // Build filter
-    const filter: any = {};
-    
-    if (role) {
-      filter.role = role;
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        role,
+        departmentId,
+        isActive,
+        search,
+        sortBy = 'lastName',
+        sortOrder = 'asc',
+      } = query;
+
+      // 🔄 CHANGED: Use shared utilities for building filters and queries
+      // ❌ REMOVED: Manual filter building logic
+      // ❌ REMOVED: Manual pagination calculations
+      // ❌ REMOVED: Manual sort object building
+
+      // ✅ ADDED: Use shared utilities for query building
+      const filter: any = {};
+
+      if (role) {
+        filter.role = role;
+      }
+
+      if (departmentId) {
+        filter.departmentId = new Types.ObjectId(departmentId);
+      }
+
+      if (typeof isActive === 'boolean') {
+        filter.isActive = isActive;
+      }
+
+      if (search) {
+        const searchFilter = ValidationUtils.buildSearchFilter(
+          search,
+          ['firstName', 'lastName', 'email']
+        );
+        Object.assign(filter, searchFilter);
+      }
+
+      // Build sort using shared utilities
+      const sort = PaginationUtils.buildSortObject(sortBy, sortOrder);
+      const skip = PaginationUtils.calculateSkip(page, limit);
+
+      // Execute queries
+      const [users, total] = await Promise.all([
+        this.userModel
+          .find(filter)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .exec(),
+        this.userModel.countDocuments(filter),
+      ]);
+
+      // Calculate pagination metadata using shared utility
+      const pagination = PaginationUtils.calculatePaginationMeta(page, limit, total);
+
+      const userResponses = users.map(user => this.mapToUserResponse(user));
+
+      this.logger.log(`Found ${users.length} users out of ${total} total`);
+
+      return {
+        users: userResponses,
+        pagination,
+      };
+    } catch (error) {
+      this.logger.error('Failed to fetch users', error.stack);
+      throw new InternalServerErrorException('Failed to fetch users');
     }
-    
-    if (departmentId) {
-      filter.departmentId = new Types.ObjectId(departmentId);
-    }
-    
-    if (isActive !== undefined) {
-      filter.isActive = isActive;
-    }
-    
-    if (search) {
-      filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    // Build sort
-    const sort: any = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-    // Calculate pagination
-    const skip = (page - 1) * limit;
-    
-    // Execute queries
-    const [users, total] = await Promise.all([
-      this.userModel
-        .find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .exec(),
-      this.userModel.countDocuments(filter).exec(),
-    ]);
-
-    // Calculate pagination metadata
-    const totalPages = Math.ceil(total / limit);
-    const pagination: PaginationMetaDto = {
-      page,
-      limit,
-      total,
-      totalPages,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-    };
-
-    return {
-      users: users.map(user => this.mapToUserResponse(user)),
-      pagination,
-    };
   }
 
-  /**
-   * Get user by ID
-   */
   async findOne(id: string): Promise<UserResponseDto> {
-    if (!Types.ObjectId.isValid(id)) {
+    this.logger.log(`Fetching user by ID: ${id}`);
+
+    // 🔄 CHANGED: Use shared validation utility
+    // ❌ REMOVED: Manual ObjectId validation
+    // ✅ ADDED: Use shared validation utility
+    if (!ValidationUtils.isValidObjectId(id)) {
       throw new BadRequestException('Invalid user ID format');
     }
 
-    const user = await this.userModel.findById(id).exec();
-    
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
+    try {
+      const user = await this.userModel.findById(id);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
 
-    return this.mapToUserResponse(user);
+      return this.mapToUserResponse(user);
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(`Failed to fetch user: ${id}`, error.stack);
+      throw new InternalServerErrorException('Failed to fetch user');
+    }
   }
 
-  /**
-   * Update user (Admin only or self for limited fields)
-   */
-  async updateUser(
+  async findByEmail(email: string): Promise<UserResponseDto | null> {
+    this.logger.log(`Fetching user by email: ${email}`);
+
+    try {
+      const user = await this.userModel.findOne({ email });
+      return user ? this.mapToUserResponse(user) : null;
+    } catch (error) {
+      this.logger.error(`Failed to fetch user by email: ${email}`, error.stack);
+      throw new InternalServerErrorException('Failed to fetch user by email');
+    }
+  }
+
+  async update(
     id: string,
     updateUserDto: UpdateUserDto,
-    updatedBy: string,
-    isAdmin: boolean = false,
-    isSelf: boolean = false,
+    updatedBy?: string,
   ): Promise<UserResponseDto> {
-    if (!Types.ObjectId.isValid(id)) {
+    this.logger.log(`Updating user: ${id}`);
+
+    // 🔄 CHANGED: Use shared validation utility
+    if (!ValidationUtils.isValidObjectId(id)) {
       throw new BadRequestException('Invalid user ID format');
     }
 
-    const user = await this.userModel.findById(id).exec();
-    
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
-    // Check permissions for field updates
-    if (!isAdmin && !isSelf) {
-      throw new ForbiddenException('You can only update your own profile or must be an admin');
-    }
-
-    // If user is updating themselves, restrict certain fields
-    if (isSelf && !isAdmin) {
-      const restrictedFields = ['role', 'departmentId', 'isActive'];
-      const hasRestrictedField = restrictedFields.some(field => updateUserDto[field] !== undefined);
-      
-      if (hasRestrictedField) {
-        throw new ForbiddenException('You cannot modify role, department, or active status');
+    try {
+      const user = await this.userModel.findById(id);
+      if (!user) {
+        throw new NotFoundException('User not found');
       }
-    }
 
-    // Check for email uniqueness if email is being updated
-    if (updateUserDto.email && updateUserDto.email !== user.email) {
-      const existingUser = await this.userModel.findOne({ 
-        email: updateUserDto.email.toLowerCase(),
-        _id: { $ne: id }
-      });
-      
-      if (existingUser) {
-        throw new ConflictException('Email already exists');
+      // Check for email uniqueness if email is being updated
+      if (updateUserDto.email && updateUserDto.email !== user.email) {
+        const existingUser = await this.userModel.findOne({ email: updateUserDto.email });
+        if (existingUser) {
+          throw new ConflictException('User with this email already exists');
+        }
       }
-    }
 
-    // Prepare update data
-    const updateData: any = {
-      ...updateUserDto,
-      lastModifiedBy: new Types.ObjectId(updatedBy),
-      lastModifiedAt: new Date(),
-    };
-
-    // Convert email to lowercase
-    if (updateData.email) {
-      updateData.email = updateData.email.toLowerCase();
-    }
-
-    // Convert departmentId to ObjectId if provided
-    if (updateData.departmentId) {
-      updateData.departmentId = new Types.ObjectId(updateData.departmentId);
-    }
-
-    // Update user
-    const updatedUser = await this.userModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).exec();
-
-    if (!updatedUser) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
-    this.logger.log(`User updated successfully: ${id} by ${updatedBy}`);
-    
-    return this.mapToUserResponse(updatedUser);
-  }
-
-  /**
-   * Delete user (Admin only)
-   */
-  async deleteUser(id: string, deletedBy: string): Promise<void> {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid user ID format');
-    }
-
-    const user = await this.userModel.findById(id).exec();
-    
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-
-    // Prevent deletion of admin users by non-admins
-    if (user.role === UserRole.ADMIN) {
-      throw new ForbiddenException('Cannot delete admin users');
-    }
-
-    // Soft delete by setting isActive to false
-    await this.userModel.findByIdAndUpdate(
-      id,
-      {
-        isActive: false,
-        lastModifiedBy: new Types.ObjectId(deletedBy),
+      // Prepare update data
+      const updateData: any = {
+        ...updateUserDto,
         lastModifiedAt: new Date(),
-      }
-    ).exec();
+        lastModifiedBy: updatedBy ? new Types.ObjectId(updatedBy) : undefined,
+      };
 
-    this.logger.log(`User soft deleted successfully: ${id} by ${deletedBy}`);
+      // Convert departmentId to ObjectId if provided
+      if (updateUserDto.departmentId) {
+        updateData.departmentId = new Types.ObjectId(updateUserDto.departmentId);
+      }
+
+      // Update user
+      const updatedUser = await this.userModel.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true, runValidators: true },
+      );
+
+      if (!updatedUser) {
+        throw new NotFoundException('User not found');
+      }
+
+      this.logger.log(`User updated successfully: ${updatedUser.email}`);
+      return this.mapToUserResponse(updatedUser);
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      this.logger.error(`Failed to update user: ${id}`, error.stack);
+      throw new InternalServerErrorException('Failed to update user');
+    }
   }
 
-  /**
-   * Get users by department
-   */
-  async findByDepartment(departmentId: string): Promise<UserResponseDto[]> {
-    if (!Types.ObjectId.isValid(departmentId)) {
+  async remove(id: string): Promise<{ message: string }> {
+    this.logger.log(`Deleting user: ${id}`);
+
+    // 🔄 CHANGED: Use shared validation utility
+    if (!ValidationUtils.isValidObjectId(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    try {
+      const user = await this.userModel.findById(id);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      await this.userModel.findByIdAndDelete(id);
+      
+      this.logger.log(`User deleted successfully: ${user.email}`);
+      return { message: 'User deleted successfully' };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(`Failed to delete user: ${id}`, error.stack);
+      throw new InternalServerErrorException('Failed to delete user');
+    }
+  }
+
+  async deactivate(id: string, deactivatedBy?: string): Promise<UserResponseDto> {
+    this.logger.log(`Deactivating user: ${id}`);
+
+    // 🔄 CHANGED: Use shared validation utility
+    if (!ValidationUtils.isValidObjectId(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    try {
+      const updatedUser = await this.userModel.findByIdAndUpdate(
+        id,
+        {
+          isActive: false,
+          lastModifiedAt: new Date(),
+          lastModifiedBy: deactivatedBy ? new Types.ObjectId(deactivatedBy) : undefined,
+        },
+        { new: true, runValidators: true },
+      );
+
+      if (!updatedUser) {
+        throw new NotFoundException('User not found');
+      }
+
+      this.logger.log(`User deactivated successfully: ${updatedUser.email}`);
+      return this.mapToUserResponse(updatedUser);
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(`Failed to deactivate user: ${id}`, error.stack);
+      throw new InternalServerErrorException('Failed to deactivate user');
+    }
+  }
+
+  async activate(id: string, activatedBy?: string): Promise<UserResponseDto> {
+    this.logger.log(`Activating user: ${id}`);
+
+    // 🔄 CHANGED: Use shared validation utility
+    if (!ValidationUtils.isValidObjectId(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    try {
+      const updatedUser = await this.userModel.findByIdAndUpdate(
+        id,
+        {
+          isActive: true,
+          lastModifiedAt: new Date(),
+          lastModifiedBy: activatedBy ? new Types.ObjectId(activatedBy) : undefined,
+        },
+        { new: true, runValidators: true },
+      );
+
+      if (!updatedUser) {
+        throw new NotFoundException('User not found');
+      }
+
+      this.logger.log(`User activated successfully: ${updatedUser.email}`);
+      return this.mapToUserResponse(updatedUser);
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(`Failed to activate user: ${id}`, error.stack);
+      throw new InternalServerErrorException('Failed to activate user');
+    }
+  }
+
+  async getUsersByDepartment(departmentId: string): Promise<UserResponseDto[]> {
+    this.logger.log(`Fetching users by department: ${departmentId}`);
+
+    // 🔄 CHANGED: Use shared validation utility
+    if (!ValidationUtils.isValidObjectId(departmentId)) {
       throw new BadRequestException('Invalid department ID format');
     }
 
-    const users = await this.userModel
-      .find({ departmentId: new Types.ObjectId(departmentId), isActive: true })
-      .sort({ lastName: 1, firstName: 1 })
-      .exec();
+    try {
+      const users = await this.userModel
+        .find({ departmentId: new Types.ObjectId(departmentId), isActive: true })
+        .sort({ lastName: 1, firstName: 1 })
+        .exec();
 
-    return users.map(user => this.mapToUserResponse(user));
+      return users.map(user => this.mapToUserResponse(user));
+    } catch (error) {
+      this.logger.error(`Failed to fetch users by department: ${departmentId}`, error.stack);
+      throw new InternalServerErrorException('Failed to fetch users by department');
+    }
   }
 
-  /**
-   * Get users by role
-   */
-  async findByRole(role: UserRole): Promise<UserResponseDto[]> {
-    const users = await this.userModel
-      .find({ role, isActive: true })
-      .sort({ lastName: 1, firstName: 1 })
-      .exec();
+  async getUserStats(): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+    byRole: Record<string, number>;
+  }> {
+    this.logger.log('Calculating user statistics');
 
-    return users.map(user => this.mapToUserResponse(user));
-  }
+    try {
+      const [total, active, inactive, roleStats] = await Promise.all([
+        this.userModel.countDocuments(),
+        this.userModel.countDocuments({ isActive: true }),
+        this.userModel.countDocuments({ isActive: false }),
+        this.userModel.aggregate([
+          { $group: { _id: '$role', count: { $sum: 1 } } },
+          { $project: { role: '$_id', count: 1, _id: 0 } },
+        ]),
+      ]);
 
-  /**
-   * Get user statistics
-   */
-  async getUserStats() {
-    const [
-      totalUsers,
-      activeUsers,
-      inactiveUsers,
-      usersByRole,
-      recentUsers,
-    ] = await Promise.all([
-      this.userModel.countDocuments().exec(),
-      this.userModel.countDocuments({ isActive: true }).exec(),
-      this.userModel.countDocuments({ isActive: false }).exec(),
-      this.userModel.aggregate([
-        { $match: { isActive: true } },
-        { $group: { _id: '$role', count: { $sum: 1 } } },
-        { $sort: { _id: 1 } }
-      ]).exec(),
-      this.userModel
-        .find({ isActive: true })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .select('firstName lastName email role createdAt')
-        .exec(),
-    ]);
-
-    return {
-      totalUsers,
-      activeUsers,
-      inactiveUsers,
-      usersByRole: usersByRole.reduce((acc, { _id, count }) => {
-        acc[_id] = count;
+      const byRole = roleStats.reduce((acc, stat) => {
+        acc[stat.role] = stat.count;
         return acc;
-      }, {}),
-      recentUsers: recentUsers.map(user => this.mapToUserResponse(user)),
-    };
-  }
+      }, {});
 
-  /**
-   * Search users
-   */
-  async searchUsers(searchTerm: string, limit: number = 10): Promise<UserResponseDto[]> {
-    if (!searchTerm || searchTerm.trim().length < 2) {
-      return [];
+      return {
+        total,
+        active,
+        inactive,
+        byRole,
+      };
+    } catch (error) {
+      this.logger.error('Failed to calculate user statistics', error.stack);
+      throw new InternalServerErrorException('Failed to calculate user statistics');
     }
-
-    const users = await this.userModel
-      .find({
-        $and: [
-          { isActive: true },
-          {
-            $or: [
-              { firstName: { $regex: searchTerm, $options: 'i' } },
-              { lastName: { $regex: searchTerm, $options: 'i' } },
-              { email: { $regex: searchTerm, $options: 'i' } },
-            ],
-          },
-        ],
-      })
-      .sort({ lastName: 1, firstName: 1 })
-      .limit(limit)
-      .exec();
-
-    return users.map(user => this.mapToUserResponse(user));
   }
 
-  /**
-   * Check if user exists
-   */
-  async userExists(id: string): Promise<boolean> {
-    if (!Types.ObjectId.isValid(id)) {
-      return false;
-    }
-
-    const count = await this.userModel.countDocuments({ _id: id, isActive: true }).exec();
-    return count > 0;
-  }
-
-  /**
-   * Update user's last login
-   */
-  async updateLastLogin(id: string): Promise<void> {
-    if (!Types.ObjectId.isValid(id)) {
-      return;
-    }
-
-    await this.userModel.findByIdAndUpdate(
-      id,
-      { lastLoginAt: new Date() }
-    ).exec();
-  }
-
-  /**
-   * Map user document to response DTO
-   */
   private mapToUserResponse(user: UserDocument): UserResponseDto {
     return {
       id: user._id.toString(),

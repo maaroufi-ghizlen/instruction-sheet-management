@@ -1,21 +1,30 @@
+
 // services/auth-service/src/auth/auth.module.ts
+// 🔄 CHANGES: Updated to use shared JWT strategy and removed local guards/decorators
 
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
+
+// ✅ ADDED: Import shared JWT strategy
+import { SharedJwtStrategy } from '@instruction-sheet/shared';
+
 import { AuthService } from './auth.service';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { LocalStrategy } from './strategies/local.strategy';
-import { DatabaseModule } from '../database/database.module';
+import { AuthController } from './auth.controller';
+import { User, UserSchema } from '../database/schemas/user.schema';
+import { RefreshToken, RefreshTokenSchema } from '../database/schemas/refresh-token.schema';
 
 @Module({
   imports: [
-    DatabaseModule,
+    ConfigModule, // ✅ ADDED: Import ConfigModule to make ConfigService available
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: RefreshToken.name, schema: RefreshTokenSchema },
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
-      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
@@ -26,7 +35,22 @@ import { DatabaseModule } from '../database/database.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
-  exports: [AuthService, JwtStrategy, PassportModule],
+  providers: [
+    AuthService,
+    // ✅ FIXED: Use factory provider for SharedJwtStrategy to inject ConfigService
+    {
+      provide: SharedJwtStrategy,
+      useFactory: (configService: ConfigService) => {
+        return new SharedJwtStrategy(configService);
+      },
+      inject: [ConfigService],
+    },
+    // ❌ REMOVED: Local guards (now imported from shared package where needed)
+    // RolesGuard,
+    // JwtAuthGuard,
+    // TwoFactorGuard,
+    // DepartmentGuard,
+  ],
+  exports: [AuthService],
 })
 export class AuthModule {}

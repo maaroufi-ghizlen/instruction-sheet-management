@@ -1,7 +1,7 @@
 // services/user-service/src/users/guards/role-modification.guard.ts
 
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { UserRole } from '@shared/enums/enums';
+import { UserRole } from '@instruction-sheet/shared';
 
 @Injectable()
 export class RoleModificationGuard implements CanActivate {

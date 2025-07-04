@@ -2,13 +2,15 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { UserRole } from '@shared/enums/enums';
+import { UserRole } from '@instruction-sheet/shared';
 
 // Define UserDocument interface with proper method signatures
 export interface UserDocument extends User, Document {
   _id: Types.ObjectId;
   readonly isLocked: boolean;
   readonly fullName: string;
+  createdAt: Date;
+  updatedAt: Date;
   toJSON(): Record<string, unknown>;
 }
 
@@ -103,7 +105,7 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User);
 
 // Add indexes (avoiding duplicates)
-UserSchema.index({ email: 1 }, { unique: true });
+// Email index is already created by unique: true in @Prop
 UserSchema.index({ role: 1 });
 UserSchema.index({ departmentId: 1 });
 UserSchema.index({ isActive: 1 });

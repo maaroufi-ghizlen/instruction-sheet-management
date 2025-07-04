@@ -2,7 +2,7 @@
 // services/user-service/src/users/guards/user-ownership.guard.ts
 
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { UserRole } from '@shared/enums/enums';
+import { UserRole } from '@instruction-sheet/shared';
 
 @Injectable()
 export class UserOwnershipGuard implements CanActivate {

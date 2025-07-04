@@ -36,9 +36,9 @@ import {
   Setup2FaResponseDto,
   UserResponseDto,
 } from './dto';
-import { Public } from './decorators/public.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { ApiAuth } from './decorators/api-auth.decorator';
+import { Public } from '@instruction-sheet/shared';
+import { CurrentUser } from '@instruction-sheet/shared';
+import { ApiAuth } from '@instruction-sheet/shared';
 import { UserDocument } from '../database/schemas/user.schema';
 
 @ApiTags('Authentication')

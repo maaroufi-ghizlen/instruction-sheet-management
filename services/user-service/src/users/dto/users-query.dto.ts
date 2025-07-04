@@ -4,7 +4,7 @@
 import { IsOptional, IsEnum, IsString, IsMongoId, IsBoolean, IsInt, Min, Max } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { UserRole } from '@shared/enums/enums';
+import { UserRole } from '@instruction-sheet/shared';
 
 export class UsersQueryDto {
   @ApiPropertyOptional({

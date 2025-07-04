@@ -1,20 +1,22 @@
+
 // services/user-service/src/users/users.module.ts
+// 🔄 CHANGES: Updated to use shared JWT strategy and removed local guards/decorators
 
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+
+import { SharedModule } from '../shared/shared.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User, UserSchema } from '../database/schemas/user.schema';
-import { JwtStrategy } from '../auth/strategies/jwt.strategy';
-import { RolesGuard } from '@shared/guards/roles.guard';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UserOwnershipGuard } from './guards/user-ownership.guard';
 
 @Module({
   imports: [
+    SharedModule, // ✅ ULTIMATE FIX: Import dedicated shared module
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
@@ -30,10 +32,8 @@ import { UserOwnershipGuard } from './guards/user-ownership.guard';
   controllers: [UsersController],
   providers: [
     UsersService,
-    JwtStrategy,
-    RolesGuard,
-    JwtAuthGuard,
     UserOwnershipGuard,
+    // ✅ REMOVED: Moved shared guards to AppModule for global availability
   ],
   exports: [UsersService, MongooseModule],
 })

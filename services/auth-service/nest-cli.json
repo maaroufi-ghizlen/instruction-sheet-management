@@ -7,6 +7,18 @@
     "deleteOutDir": true,
     "watchAssets": true,
     "assets": ["**/*.json"],
-    "tsConfigPath": "tsconfig.json"
+    "tsConfigPath": "tsconfig.json",
+    "webpack": true
+  },
+  "projects": {
+    "auth-service": {
+      "type": "application",
+      "root": ".",
+      "entryFile": "main",
+      "sourceRoot": "src",
+      "compilerOptions": {
+        "tsConfigPath": "tsconfig.json"
+      }
+    }
   }
 }
