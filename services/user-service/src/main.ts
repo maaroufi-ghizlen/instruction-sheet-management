@@ -1,4 +1,5 @@
 // services/user-service/src/main.ts
+// 🔄 FINAL FIX: No changes needed, but ensure proper error handling
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';

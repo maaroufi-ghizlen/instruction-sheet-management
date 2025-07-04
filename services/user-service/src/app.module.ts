@@ -1,6 +1,5 @@
-
 // services/user-service/src/app.module.ts
-// 🔄 CHANGES: Updated to use shared guards globally and removed local ones
+// ✅ CORRECT FIX: Make Reflector available globally
 
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -8,6 +7,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { APP_GUARD } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
+
+import { 
+  JwtAuthGuard, 
+  SharedJwtStrategy 
+} from '@instruction-sheet/shared';
 
 import { UsersModule } from './users/users.module';
 import { DatabaseModule } from './database/database.module';
@@ -74,6 +80,27 @@ import configuration from './config/configuration';
     UsersModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    // ✅ CRITICAL FIX: Make Reflector available globally
+    {
+      provide: Reflector,
+      useClass: Reflector,
+    },
+    
+    // Register SharedJwtStrategy with proper DI
+    {
+      provide: SharedJwtStrategy,
+      useFactory: (configService: ConfigService) => {
+        return new SharedJwtStrategy(configService);
+      },
+      inject: [ConfigService],
+    },
+    
+    // Register JwtAuthGuard as global guard
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -1,5 +1,6 @@
+
 // services/user-service/src/users/users.controller.ts
-// 🔄 CHANGES: Updated imports to use @shared package instead of local files
+// ✅ NO CHANGES NEEDED: Keep using guards as before
 
 import {
   Controller,
@@ -27,31 +28,24 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 
-
+// ✅ Keep using shared guards as before
 import {
-  JwtAuthGuard,
   RolesGuard,
   DepartmentGuard,
 } from '@instruction-sheet/shared';
 import {
   Roles,
   CurrentUser,
-  ApiAuth,
   SwaggerAuth,
   RequireDepartmentAccess,
 } from '@instruction-sheet/shared';
 import { UserRole } from '@instruction-sheet/shared';
 import {
-  PaginationQueryDto,
-  SearchQueryDto,
   IdParamDto,
-  BaseResponseDto,
 } from '@instruction-sheet/shared';
 
 import { UsersService } from './users.service';
-// 🔄 UNCHANGED: Keep service-specific guards that are unique to user service
 import { UserOwnershipGuard } from './guards/user-ownership.guard';
-// 🔄 UNCHANGED: Keep service-specific DTOs
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -62,7 +56,7 @@ import {
 
 @ApiTags('Users')
 @Controller('users')
-@UseGuards(ThrottlerGuard, JwtAuthGuard) // 🔄 CHANGED: Using shared JwtAuthGuard
+@UseGuards(ThrottlerGuard) // JwtAuthGuard is now global
 @ApiBearerAuth('JWT-auth')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
@@ -70,10 +64,10 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @UseGuards(RolesGuard) // 🔄 CHANGED: Using shared RolesGuard
-  @Roles(UserRole.ADMIN) // 🔄 CHANGED: Using shared Roles decorator
+  @UseGuards(RolesGuard) // ✅ This will now work with global Reflector
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @SwaggerAuth({
     summary: 'Create a new user',
     description: 'Creates a new user account. Only accessible by administrators.',
     successStatus: 201,
@@ -82,16 +76,16 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'Conflict - user with email already exists' })
   async create(
     @Body() createUserDto: CreateUserDto,
-    @CurrentUser() user: any, // 🔄 CHANGED: Using shared CurrentUser decorator
+    @CurrentUser() user: any,
   ): Promise<UserResponseDto> {
     this.logger.log(`Admin ${user.email} creating new user: ${createUserDto.email}`);
     return this.usersService.create(createUserDto, user.sub);
   }
 
   @Get()
-  @UseGuards(RolesGuard) // 🔄 CHANGED: Using shared RolesGuard
-  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP) // 🔄 CHANGED: Using shared Roles decorator
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @UseGuards(RolesGuard) // ✅ This will now work with global Reflector
+  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP)
+  @SwaggerAuth({
     summary: 'Get all users with filtering and pagination',
     description: 'Retrieves a paginated list of users with optional filtering.',
   })
@@ -101,9 +95,9 @@ export class UsersController {
   }
 
   @Get('stats')
-  @UseGuards(RolesGuard) // 🔄 CHANGED: Using shared RolesGuard
-  @Roles(UserRole.ADMIN) // 🔄 CHANGED: Using shared Roles decorator
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @UseGuards(RolesGuard) // ✅ This will now work with global Reflector
+  @Roles(UserRole.ADMIN)
+  @SwaggerAuth({
     summary: 'Get user statistics',
     description: 'Retrieves user statistics including total, active, inactive counts and role distribution.',
   })
@@ -113,90 +107,90 @@ export class UsersController {
   }
 
   @Get('by-department/:departmentId')
-  @UseGuards(RolesGuard, DepartmentGuard) // 🔄 CHANGED: Using shared guards
-  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP) // 🔄 CHANGED: Using shared Roles decorator
-  @RequireDepartmentAccess() // 🔄 CHANGED: Using shared decorator
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @UseGuards(RolesGuard, DepartmentGuard) // ✅ Both guards will now work with global Reflector
+  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP)
+  @RequireDepartmentAccess()
+  @SwaggerAuth({
     summary: 'Get users by department',
     description: 'Retrieves all active users in a specific department.',
   })
   async getUsersByDepartment(
-    @Param() params: IdParamDto, // 🔄 CHANGED: Using shared DTO for ID validation
+    @Param() params: IdParamDto,
   ): Promise<UserResponseDto[]> {
     this.logger.log(`Fetching users for department: ${params.id}`);
     return this.usersService.getUsersByDepartment(params.id);
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard, UserOwnershipGuard) // 🔄 CHANGED: RolesGuard from shared, UserOwnershipGuard kept local
-  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP, UserRole.END_USER) // 🔄 CHANGED: Using shared Roles decorator
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @UseGuards(RolesGuard, UserOwnershipGuard)
+  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP, UserRole.END_USER)
+  @SwaggerAuth({
     summary: 'Get user by ID',
     description: 'Retrieves a specific user by ID. Users can only access their own profile unless they are administrators.',
   })
-  async findOne(@Param() params: IdParamDto): Promise<UserResponseDto> { // 🔄 CHANGED: Using shared DTO
+  async findOne(@Param() params: IdParamDto): Promise<UserResponseDto> {
     this.logger.log(`Fetching user: ${params.id}`);
     return this.usersService.findOne(params.id);
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard, UserOwnershipGuard) // 🔄 CHANGED: RolesGuard from shared, UserOwnershipGuard kept local
-  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP, UserRole.END_USER) // 🔄 CHANGED: Using shared Roles decorator
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @UseGuards(RolesGuard, UserOwnershipGuard)
+  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP, UserRole.END_USER)
+  @SwaggerAuth({
     summary: 'Update user',
     description: 'Updates a user profile. Users can update their own profile, administrators can update any user.',
   })
   async update(
-    @Param() params: IdParamDto, // 🔄 CHANGED: Using shared DTO
+    @Param() params: IdParamDto,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() user: any, // 🔄 CHANGED: Using shared CurrentUser decorator
+    @CurrentUser() user: any,
   ): Promise<UserResponseDto> {
     this.logger.log(`Updating user: ${params.id} by ${user.email}`);
     return this.usersService.update(params.id, updateUserDto, user.sub);
   }
 
   @Patch(':id/deactivate')
-  @UseGuards(RolesGuard) // 🔄 CHANGED: Using shared RolesGuard
-  @Roles(UserRole.ADMIN) // 🔄 CHANGED: Using shared Roles decorator
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @SwaggerAuth({
     summary: 'Deactivate user',
     description: 'Deactivates a user account. Only accessible by administrators.',
   })
   async deactivate(
-    @Param() params: IdParamDto, // 🔄 CHANGED: Using shared DTO
-    @CurrentUser() user: any, // 🔄 CHANGED: Using shared CurrentUser decorator
+    @Param() params: IdParamDto,
+    @CurrentUser() user: any,
   ): Promise<UserResponseDto> {
     this.logger.log(`Deactivating user: ${params.id} by admin ${user.email}`);
     return this.usersService.deactivate(params.id, user.sub);
   }
 
   @Patch(':id/activate')
-  @UseGuards(RolesGuard) // 🔄 CHANGED: Using shared RolesGuard
-  @Roles(UserRole.ADMIN) // 🔄 CHANGED: Using shared Roles decorator
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @SwaggerAuth({
     summary: 'Activate user',
     description: 'Activates a user account. Only accessible by administrators.',
   })
   async activate(
-    @Param() params: IdParamDto, // 🔄 CHANGED: Using shared DTO
-    @CurrentUser() user: any, // 🔄 CHANGED: Using shared CurrentUser decorator
+    @Param() params: IdParamDto,
+    @CurrentUser() user: any,
   ): Promise<UserResponseDto> {
     this.logger.log(`Activating user: ${params.id} by admin ${user.email}`);
     return this.usersService.activate(params.id, user.sub);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard) // 🔄 CHANGED: Using shared RolesGuard
-  @Roles(UserRole.ADMIN) // 🔄 CHANGED: Using shared Roles decorator
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @SwaggerAuth({ // 🔄 CHANGED: Using shared SwaggerAuth decorator
+  @SwaggerAuth({
     summary: 'Delete user',
     description: 'Permanently deletes a user account. Only accessible by administrators.',
     successStatus: 204,
   })
   async remove(
-    @Param() params: IdParamDto, // 🔄 CHANGED: Using shared DTO
-    @CurrentUser() user: any, // 🔄 CHANGED: Using shared CurrentUser decorator
+    @Param() params: IdParamDto,
+    @CurrentUser() user: any,
   ): Promise<void> {
     this.logger.log(`Deleting user: ${params.id} by admin ${user.email}`);
     await this.usersService.remove(params.id);
