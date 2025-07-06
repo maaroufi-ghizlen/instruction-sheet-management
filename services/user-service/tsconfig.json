@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "declaration": false,
+    "declaration": true,
+    "emitDeclarationOnly": false,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -9,26 +10,42 @@
     "target": "ES2020",
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
-    "baseUrl": "./src",
+    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
+    "typeRoots": ["./node_modules/@types", "../../shared/common"],
     "strict": false,
     "noImplicitAny": false,
     "strictNullChecks": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
+    "noEmitOnError": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "useDefineForClassFields": false,
+    "types": [],
     "paths": {
-      "@instruction-sheet/shared": ["../../shared/dist/index"],
-      "@shared/*": ["../../shared/dist/*"],
-      "@shared": ["../../shared/dist/index"],
+      // 🎯 SHARED PACKAGE PATHS - Use source files directly
+      "@shared/*": ["../../shared/common/*"],
+      "@shared/types": ["../../shared/common/types/index"],
+      "@shared/enums": ["../../shared/common/enums/enums"],
+      "@shared/interfaces": ["../../shared/common/interfaces/interfaces"],
+      "@shared/constants": ["../../shared/common/constants/constants"],
+      "@shared/decorators": ["../../shared/common/decorators/index"],
+      "@shared/guards": ["../../shared/common/guards/index"],
+      "@shared/utils": ["../../shared/common/utils/index"],
+      "@shared/auth": ["../../shared/common/auth/index"],
+      "@shared/dtos": ["../../shared/common/dtos/index"],
+      
+      // 📁 LOCAL SERVICE PATHS
       "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"],
+  "references": [
+    {
+      "path": "../../shared"
+    }
+  ]
 }

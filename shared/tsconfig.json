@@ -3,6 +3,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "declaration": true,
+    "composite": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -10,6 +11,7 @@
     "target": "ES2020",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./",
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
@@ -25,6 +27,6 @@
       "@shared/*": ["./common/*"]
     }
   },
-  "include": ["common/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+  "include": ["index.ts", "common/**/*", "utils/**/*", "validation/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "../services/**/*"]
 }

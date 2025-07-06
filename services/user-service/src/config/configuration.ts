@@ -3,7 +3,7 @@
 export default () => ({
   // Database Configuration
   database: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/instruction_sheet_db',
+    uri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/instruction_sheet_db',
   },
 
   // Redis Configuration

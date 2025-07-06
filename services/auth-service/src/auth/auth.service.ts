@@ -18,8 +18,7 @@ import * as qrcode from 'qrcode';
 import { randomBytes, createHash } from 'crypto';
 import { User, UserDocument } from '../database/schemas/user.schema';
 import { RefreshToken, RefreshTokenDocument } from '../database/schemas/refresh-token.schema';
-import { UserRole } from '@instruction-sheet/shared';
-import { JwtPayload } from '@instruction-sheet/shared';
+import { UserRole, JwtPayload } from '@instruction-sheet/shared';
 import {
   LoginDto,
   RegisterDto,

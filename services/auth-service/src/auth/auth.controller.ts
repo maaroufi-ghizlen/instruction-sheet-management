@@ -36,9 +36,11 @@ import {
   Setup2FaResponseDto,
   UserResponseDto,
 } from './dto';
-import { Public } from '@instruction-sheet/shared';
-import { CurrentUser } from '@instruction-sheet/shared';
-import { ApiAuth } from '@instruction-sheet/shared';
+import { 
+  Public, 
+  CurrentUser, 
+  ApiAuth 
+} from '@instruction-sheet/shared';
 import { UserDocument } from '../database/schemas/user.schema';
 
 @ApiTags('Authentication')

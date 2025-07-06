@@ -1,19 +1,18 @@
 // services/user-service/src/app.module.ts
-// ✅ CORRECT FIX: Make Reflector available globally
-
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { APP_GUARD } from '@nestjs/core';
-import { Reflector } from '@nestjs/core';
+import { APP_GUARD, Reflector } from '@nestjs/core';
 
 import { 
   JwtAuthGuard, 
-  SharedJwtStrategy 
+  RolesGuard,
+  DepartmentGuard 
 } from '@instruction-sheet/shared';
+import { JwtStrategy } from './auth/jwt.strategy';
 
 import { UsersModule } from './users/users.module';
 import { DatabaseModule } from './database/database.module';
@@ -38,25 +37,27 @@ import configuration from './config/configuration';
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => [
-        {
-          ttl: configService.get<number>('RATE_LIMIT_TTL') || 60000,
-          limit: configService.get<number>('RATE_LIMIT_MAX') || 100,
-        },
-      ],
+      useFactory: (configService: ConfigService) => ({
+        ttl: configService.get<number>('RATE_LIMIT_TTL') || 60000,
+        limit: configService.get<number>('RATE_LIMIT_MAX') || 100,
+      }),
     }),
 
     // Database
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/instruction_sheet_db',
-        retryWrites: true,
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const uri = 'mongodb://127.0.0.1:27017/instruction_sheet_db';
+        console.log('🔍 MongoDB URI being used:', uri);
+        return {
+          uri,
+          retryWrites: true,
+          maxPoolSize: 10,
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 45000,
+        };
+      },
     }),
 
     // JWT (for token validation)
@@ -81,26 +82,31 @@ import configuration from './config/configuration';
   ],
   controllers: [],
   providers: [
-    // ✅ CRITICAL FIX: Make Reflector available globally
-    {
-      provide: Reflector,
-      useClass: Reflector,
-    },
-    
-    // Register SharedJwtStrategy with proper DI
-    {
-      provide: SharedJwtStrategy,
-      useFactory: (configService: ConfigService) => {
-        return new SharedJwtStrategy(configService);
-      },
-      inject: [ConfigService],
-    },
+    // Register local JWT strategy
+    JwtStrategy,
     
     // Register JwtAuthGuard as global guard
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    
+    // ✅ CRITICAL: Register RolesGuard as global guard with factory
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector) => new RolesGuard(reflector),
+      inject: [Reflector],
+    },
+    
+    // ✅ CRITICAL: Register DepartmentGuard as global guard with factory
+    {
+      provide: APP_GUARD,
+      useFactory: (reflector: Reflector) => new DepartmentGuard(reflector),
+      inject: [Reflector],
+    },
+    
+    // ✅ CRITICAL: Provide Reflector explicitly
+    Reflector,
   ],
 })
 export class AppModule {}

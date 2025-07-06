@@ -1,4 +1,4 @@
-// shared/common/enums.ts
+// shared/common/enums/enums.ts
 
 export enum UserRole {
   ADMIN = 'admin',

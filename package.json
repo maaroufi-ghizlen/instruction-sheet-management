@@ -19,7 +19,10 @@
     "package.json",
     "README.md"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "cd": "^0.3.3",
+    "shared": "^0.2.0"
+  },
   "devDependencies": {
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.17.0",

@@ -1,7 +1,4 @@
-
 // services/user-service/src/users/users.controller.ts
-// ✅ NO CHANGES NEEDED: Keep using guards as before
-
 import {
   Controller,
   Get,
@@ -28,11 +25,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 
-// ✅ Keep using shared guards as before
-import {
-  RolesGuard,
-  DepartmentGuard,
-} from '@instruction-sheet/shared';
+// Import decorators from shared package
 import {
   Roles,
   CurrentUser,
@@ -64,8 +57,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @UseGuards(RolesGuard) // ✅ This will now work with global Reflector
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN) // RolesGuard will be applied globally
   @HttpCode(HttpStatus.CREATED)
   @SwaggerAuth({
     summary: 'Create a new user',
@@ -83,8 +75,7 @@ export class UsersController {
   }
 
   @Get()
-  @UseGuards(RolesGuard) // ✅ This will now work with global Reflector
-  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP)
+  @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP) // RolesGuard will be applied globally
   @SwaggerAuth({
     summary: 'Get all users with filtering and pagination',
     description: 'Retrieves a paginated list of users with optional filtering.',
@@ -95,7 +86,6 @@ export class UsersController {
   }
 
   @Get('stats')
-  @UseGuards(RolesGuard) // ✅ This will now work with global Reflector
   @Roles(UserRole.ADMIN)
   @SwaggerAuth({
     summary: 'Get user statistics',
@@ -107,7 +97,6 @@ export class UsersController {
   }
 
   @Get('by-department/:departmentId')
-  @UseGuards(RolesGuard, DepartmentGuard) // ✅ Both guards will now work with global Reflector
   @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP)
   @RequireDepartmentAccess()
   @SwaggerAuth({
@@ -122,7 +111,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard, UserOwnershipGuard)
+  @UseGuards(UserOwnershipGuard)
   @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP, UserRole.END_USER)
   @SwaggerAuth({
     summary: 'Get user by ID',
@@ -134,7 +123,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard, UserOwnershipGuard)
+  @UseGuards(UserOwnershipGuard)
   @Roles(UserRole.ADMIN, UserRole.PREPARATEUR, UserRole.IPDF, UserRole.IQP, UserRole.END_USER)
   @SwaggerAuth({
     summary: 'Update user',
@@ -150,7 +139,6 @@ export class UsersController {
   }
 
   @Patch(':id/deactivate')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @SwaggerAuth({
     summary: 'Deactivate user',
@@ -165,7 +153,6 @@ export class UsersController {
   }
 
   @Patch(':id/activate')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @SwaggerAuth({
     summary: 'Activate user',
@@ -180,13 +167,13 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @SwaggerAuth({
     summary: 'Delete user',
     description: 'Permanently deletes a user account. Only accessible by administrators.',
     successStatus: 204,
+    successDescription: 'User deleted successfully',
   })
   async remove(
     @Param() params: IdParamDto,

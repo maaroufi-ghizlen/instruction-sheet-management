@@ -8,13 +8,11 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-// ✅ ADDED: Import shared JWT strategy
-import { SharedJwtStrategy } from '@instruction-sheet/shared';
-
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User, UserSchema } from '../database/schemas/user.schema';
 import { RefreshToken, RefreshTokenSchema } from '../database/schemas/refresh-token.schema';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -37,14 +35,7 @@ import { RefreshToken, RefreshTokenSchema } from '../database/schemas/refresh-to
   controllers: [AuthController],
   providers: [
     AuthService,
-    // ✅ FIXED: Use factory provider for SharedJwtStrategy to inject ConfigService
-    {
-      provide: SharedJwtStrategy,
-      useFactory: (configService: ConfigService) => {
-        return new SharedJwtStrategy(configService);
-      },
-      inject: [ConfigService],
-    },
+    JwtStrategy,
     // ❌ REMOVED: Local guards (now imported from shared package where needed)
     // RolesGuard,
     // JwtAuthGuard,

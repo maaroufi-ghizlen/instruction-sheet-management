@@ -13,7 +13,7 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-    "typeRoots": ["./node_modules/@types", "../../shared/common"],
+    "typeRoots": ["./node_modules/@types", "../../shared/dist"],
     "strict": false,
     "noImplicitAny": false,
     "strictNullChecks": false,
@@ -23,7 +23,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "types": [],
+    "useDefineForClassFields": false,
     "paths": {
       // 🎯 SHARED PACKAGE PATHS - Use source files directly
       "@shared/*": ["../../shared/common/*"],
