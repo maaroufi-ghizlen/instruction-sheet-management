@@ -24,7 +24,7 @@ export class SharedAuthModule {
     return {
       module: SharedAuthModule,
       imports: [
-        ConfigModule, // Import ConfigModule to make ConfigService available
+        ConfigModule, 
         PassportModule.register({ 
           defaultStrategy: 'jwt',
           session: false 

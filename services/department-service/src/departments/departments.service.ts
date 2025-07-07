@@ -117,8 +117,6 @@ export class DepartmentsService {
           .sort(sort)
           .skip(skip)
           .limit(limit)
-          .populate('manager', 'firstName lastName email')
-          .populate('employees', 'firstName lastName email')
           .exec(),
         this.departmentModel.countDocuments(filter),
       ]);
@@ -152,12 +150,13 @@ export class DepartmentsService {
     try {
       let query = this.departmentModel.findById(id);
       
-      if (populate) {
-        query = query
-          .populate('manager', 'firstName lastName email role')
-          .populate('employees', 'firstName lastName email role')
-          .populate('sheets', 'title status createdAt');
-      }
+      // Note: Populate disabled - User and Sheet schemas not available in this service
+      // if (populate) {
+      //   query = query
+      //     .populate('manager', 'firstName lastName email role')
+      //     .populate('employees', 'firstName lastName email role')
+      //     .populate('sheets', 'title status createdAt');
+      // }
 
       const department = await query.exec();
 
@@ -218,8 +217,6 @@ export class DepartmentsService {
           runValidators: true,
         },
       )
-      .populate('manager', 'firstName lastName email role')
-      .populate('employees', 'firstName lastName email role')
       .exec();
 
       this.logger.log(`Department updated successfully: ${id}`);
@@ -296,8 +293,6 @@ export class DepartmentsService {
         },
         { new: true },
       )
-      .populate('manager', 'firstName lastName email role')
-      .populate('employees', 'firstName lastName email role')
       .exec();
 
       this.logger.log(`Employee added to department successfully`);
@@ -333,8 +328,6 @@ export class DepartmentsService {
         },
         { new: true },
       )
-      .populate('manager', 'firstName lastName email role')
-      .populate('employees', 'firstName lastName email role')
       .exec();
 
       this.logger.log(`Employee removed from department successfully`);
@@ -358,7 +351,6 @@ export class DepartmentsService {
     try {
       const departments = await this.departmentModel
         .find({ manager: managerId, isActive: true })
-        .populate('employees', 'firstName lastName email role')
         .exec();
 
       return departments;

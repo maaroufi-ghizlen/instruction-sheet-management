@@ -136,9 +136,6 @@ export class SheetsService {
           .sort(sort)
           .skip(skip)
           .limit(limit)
-          .populate('uploadedBy', 'firstName lastName email')
-          .populate('department', 'name description')
-          .populate('validatedBy', 'firstName lastName email')
           .exec(),
         this.sheetModel.countDocuments(filter),
       ]);
@@ -172,12 +169,13 @@ export class SheetsService {
     try {
       let query = this.sheetModel.findById(id);
       
-      if (populate) {
-        query = query
-          .populate('uploadedBy', 'firstName lastName email role')
-          .populate('department', 'name description manager')
-          .populate('validatedBy', 'firstName lastName email role');
-      }
+      // Note: Populate disabled - User and Department schemas not available in this service
+      // if (populate) {
+      //   query = query
+      //     .populate('uploadedBy', 'firstName lastName email role')
+      //     .populate('department', 'name description manager')
+      //     .populate('validatedBy', 'firstName lastName email role');
+      // }
 
       const sheet = await query.exec();
 
@@ -201,9 +199,6 @@ export class SheetsService {
     try {
       const sheet = await this.sheetModel
         .findOne({ reference: reference.toUpperCase() })
-        .populate('uploadedBy', 'firstName lastName email role')
-        .populate('department', 'name description')
-        .populate('validatedBy', 'firstName lastName email role')
         .exec();
 
       if (!sheet) {
@@ -260,9 +255,6 @@ export class SheetsService {
           runValidators: true,
         },
       )
-      .populate('uploadedBy', 'firstName lastName email role')
-      .populate('department', 'name description')
-      .populate('validatedBy', 'firstName lastName email role')
       .exec();
 
       this.logger.log(`Sheet updated successfully: ${id}`);
@@ -345,9 +337,6 @@ export class SheetsService {
         },
         { new: true },
       )
-      .populate('uploadedBy', 'firstName lastName email role')
-      .populate('department', 'name description')
-      .populate('validatedBy', 'firstName lastName email role')
       .exec();
 
       this.logger.log(`Sheet validation completed: ${id}`);
@@ -371,8 +360,6 @@ export class SheetsService {
     try {
       const sheets = await this.sheetModel
         .find({ department: departmentId, isActive: true })
-        .populate('uploadedBy', 'firstName lastName email')
-        .populate('validatedBy', 'firstName lastName email')
         .sort({ createdAt: -1 })
         .exec();
 
@@ -393,8 +380,6 @@ export class SheetsService {
     try {
       const sheets = await this.sheetModel
         .find({ uploadedBy: uploaderId, isActive: true })
-        .populate('department', 'name description')
-        .populate('validatedBy', 'firstName lastName email')
         .sort({ createdAt: -1 })
         .exec();
 
