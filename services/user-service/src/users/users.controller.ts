@@ -15,6 +15,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
   ApiOperation,
@@ -49,7 +50,7 @@ import {
 
 @ApiTags('Users')
 @Controller('users')
-@UseGuards(ThrottlerGuard) // JwtAuthGuard is now global
+@UseGuards(ThrottlerGuard, AuthGuard('jwt')) // Add JWT authentication guard
 @ApiBearerAuth('JWT-auth')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);

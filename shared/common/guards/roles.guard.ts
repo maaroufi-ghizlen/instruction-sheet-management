@@ -19,20 +19,27 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest();
+    const { user } = request;
+    
+    console.log('🔐 RolesGuard - Request headers:', request.headers?.authorization ? 'Bearer token present' : 'No Authorization header');
+    console.log('🔐 RolesGuard - User from request:', user);
     
     if (!user) {
+      console.log('❌ RolesGuard - No user in request');
       throw new ForbiddenException('User not authenticated');
     }
 
     const hasRole = requiredRoles.some((role) => user.role === role);
     
     if (!hasRole) {
+      console.log('❌ RolesGuard - User role mismatch. Required:', requiredRoles, 'User role:', user.role);
       throw new ForbiddenException(
         `Access denied. Required roles: ${requiredRoles.join(', ')}. User role: ${user.role}`,
       );
     }
 
+    console.log('✅ RolesGuard - User authorized');
     return true;
   }
 }

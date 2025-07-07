@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SharedAuthModule } from '@instruction-sheet/shared';
 import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import configuration from './config/configuration';
@@ -33,6 +34,23 @@ import configuration from './config/configuration';
           limit: configService.get<number>('RATE_LIMIT_MAX') || 100,
         },
       ],
+    }),
+
+    // Shared Authentication Module - MUST come before other modules that use authentication
+    SharedAuthModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET') || configService.get<string>('jwt.secret');
+        console.log('🔧 Auth-Service SharedAuthModule factory - secret:', secret ? 'Present' : 'Missing');
+        console.log('🔧 Auth-Service SharedAuthModule factory - secret length:', secret?.length);
+        return {
+          secret: secret,
+          signOptions: {
+            expiresIn: configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME') || configService.get<string>('jwt.accessTokenExpirationTime') || '15m',
+          },
+        };
+      },
     }),
 
     // Database - FIXED MongoDB options

@@ -1,17 +1,19 @@
-// services/user-service/src/app.module.ts
+// services/sheet-service/src/app.module.ts
+
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 
 import { 
+  JwtAuthGuard, 
   RolesGuard,
   DepartmentGuard,
-  SharedAuthModule,
+  SharedAuthModule
 } from '@instruction-sheet/shared';
 
-import { UsersModule } from './users/users.module';
+import { SheetsModule } from './sheets/sheets.module';
 import { DatabaseModule } from './database/database.module';
 import configuration from './config/configuration';
 
@@ -30,31 +32,35 @@ import configuration from './config/configuration';
       expandVariables: true,
     }),
 
-    // Passport and JWT - MUST come before other modules that use authentication
-    SharedAuthModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const secret = configService.get<string>('jwt.secret');
-        console.log('🔧 AppModule SharedAuthModule factory - secret:', secret ? 'Present' : 'Missing');
-        console.log('🔧 AppModule SharedAuthModule factory - secret length:', secret?.length);
-        return {
-          secret: secret,
-          signOptions: {
-            expiresIn: configService.get<string>('jwt.accessTokenExpirationTime') || '15m',
-          },
-        };
-      },
-    }),
-
     // Rate limiting
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        ttl: configService.get<number>('RATE_LIMIT_TTL') || 60000,
-        limit: configService.get<number>('RATE_LIMIT_MAX') || 100,
+        throttlers: [
+          {
+            ttl: configService.get<number>('RATE_LIMIT_TTL') || 60000,
+            limit: configService.get<number>('RATE_LIMIT_MAX') || 100,
+          },
+        ],
       }),
+    }),
+
+    // Passport and JWT - MUST come before other modules that use authentication
+    SharedAuthModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET') || 'your-super-secret-jwt-key';
+        console.log('� Sheet-Service SharedAuthModule factory - secret:', secret ? 'Present' : 'Missing');
+        console.log('🔧 Sheet-Service SharedAuthModule factory - secret length:', secret?.length);
+        return {
+          secret: secret,
+          signOptions: {
+            expiresIn: configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME') || '15m',
+          },
+        };
+      },
     }),
 
     // Database
@@ -74,28 +80,27 @@ import configuration from './config/configuration';
       },
     }),
 
-    // Custom modules
+    // Database module
     DatabaseModule,
-    UsersModule,
+
+    // Feature modules
+    SheetsModule,
   ],
   controllers: [],
   providers: [
-    // ✅ CRITICAL: Register RolesGuard as global guard with factory
+    // Global guards - using instances from SharedAuthModule
     {
       provide: APP_GUARD,
-      useFactory: (reflector: Reflector) => new RolesGuard(reflector),
-      inject: [Reflector],
+      useExisting: JwtAuthGuard,
     },
-    
-    // ✅ CRITICAL: Register DepartmentGuard as global guard with factory
     {
       provide: APP_GUARD,
-      useFactory: (reflector: Reflector) => new DepartmentGuard(reflector),
-      inject: [Reflector],
+      useExisting: RolesGuard,
     },
-    
-    // ✅ CRITICAL: Provide Reflector explicitly
-    Reflector,
+    {
+      provide: APP_GUARD,
+      useExisting: DepartmentGuard,
+    },
   ],
 })
 export class AppModule {}

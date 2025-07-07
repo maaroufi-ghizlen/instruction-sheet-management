@@ -2,17 +2,33 @@
 
 ## Problem Overview
 
-The user-service was failing to start due to dependency injection issues with the `RolesGuard` and `DepartmentGuard` classes. The error message was:
+The user-service was failing to start due to dependency injection issues with guard classes. Initially, the error was:
 
 ```
 ERROR [ExceptionHandler] Nest can't resolve dependencies of the RolesGuard (?). 
 Please make sure that the argument Reflector at index [0] is available in the AppModule context.
 ```
 
+After partial fixes, a new error emerged:
+
+```
+ERROR [ExceptionsHandler] Cannot read properties of undefined (reading 'getAllAndOverride')
+TypeError: Cannot read properties of undefined (reading 'getAllAndOverride')
+    at JwtAuthGuard.canActivate (jwt-auth.guard.ts:15:37)
+```
+
+This revealed that **ALL guards requiring `Reflector` dependency** were affected, not just `RolesGuard`.
+
 ## Root Cause Analysis
 
 ### 1. **Guard Architecture Issue**
-The `RolesGuard` and `DepartmentGuard` classes (from the shared package) require a `Reflector` instance to be injected into their constructors. The `Reflector` is used to read metadata from decorators like `@Roles()` and `@RequireDepartmentAccess()`.
+Multiple guard classes (from the shared package) require a `Reflector` instance to be injected into their constructors:
+
+- **JwtAuthGuard**: Uses `Reflector` to read `@Public()` decorator metadata
+- **RolesGuard**: Uses `Reflector` to read `@Roles()` decorator metadata  
+- **DepartmentGuard**: Uses `Reflector` to read `@RequireDepartmentAccess()` decorator metadata
+
+The `Reflector` is essential for these guards to access decorator metadata and make authorization decisions.
 
 ### 2. **Local vs Global Guard Registration**
 Initially, the guards were being used in two conflicting ways:
@@ -88,15 +104,19 @@ providers: [
 ```
 
 ### Step 3: Fix Global Guard Registration
-**Problem**: The global guard registration in `AppModule` used `useClass`, which doesn't handle dependency injection properly.
+**Problem**: The global guard registration in `AppModule` used `useClass`, which doesn't handle dependency injection properly for guards that require dependencies.
 
-**Solution**: Changed to use factory functions that explicitly inject the `Reflector` dependency.
+**Solution**: Changed to use factory functions that explicitly inject the `Reflector` dependency for ALL guards that need it.
 
 **Files Modified**:
 - `src/app.module.ts`
 
 **Before**:
 ```typescript
+{
+  provide: APP_GUARD,
+  useClass: JwtAuthGuard,  // ❌ JwtAuthGuard also needs Reflector
+},
 {
   provide: APP_GUARD,
   useClass: RolesGuard,
@@ -111,6 +131,11 @@ providers: [
 ```typescript
 {
   provide: APP_GUARD,
+  useFactory: (reflector: Reflector) => new JwtAuthGuard(reflector),
+  inject: [Reflector],
+},
+{
+  provide: APP_GUARD,
   useFactory: (reflector: Reflector) => new RolesGuard(reflector),
   inject: [Reflector],
 },
@@ -120,6 +145,8 @@ providers: [
   inject: [Reflector],
 },
 ```
+
+**Critical Discovery**: The `JwtAuthGuard` also requires a `Reflector` dependency to check for `@Public()` decorators, so it needed the same factory pattern fix.
 
 ### Step 4: Clean Up Imports
 **Problem**: Controller files were importing `RolesGuard` and `DepartmentGuard` classes that were no longer used locally.
@@ -145,14 +172,18 @@ When using `useFactory` with `inject`, NestJS:
 }
 ```
 
-### Why `useClass` Failed
-When using `useClass`, NestJS tries to instantiate the class directly but can't resolve the constructor dependencies in the global context:
+### Why `useClass` Failed for All Guards
+When using `useClass`, NestJS tries to instantiate the class directly but can't resolve the constructor dependencies in the global context. This affected:
+
+1. **JwtAuthGuard**: Needs `Reflector` to check `@Public()` decorators
+2. **RolesGuard**: Needs `Reflector` to read `@Roles()` metadata
+3. **DepartmentGuard**: Needs `Reflector` to read `@RequireDepartmentAccess()` metadata
 
 ```typescript
-// This fails because NestJS can't inject Reflector into RolesGuard's constructor
+// This fails for ANY guard that needs dependencies
 {
   provide: APP_GUARD,
-  useClass: RolesGuard,  // ❌ No way to inject dependencies
+  useClass: JwtAuthGuard,  // ❌ Can't inject Reflector into constructor
 }
 ```
 

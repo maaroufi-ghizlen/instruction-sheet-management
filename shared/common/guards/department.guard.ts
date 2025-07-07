@@ -1,4 +1,4 @@
-// services/auth-service/src/auth/guards/department.guard.ts
+// shared/common/guards/department.guard.ts
 
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
